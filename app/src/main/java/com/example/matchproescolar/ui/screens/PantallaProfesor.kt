@@ -1,0 +1,354 @@
+package com.example.matchproescolar.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.matchproescolar.data.model.TorneoEntity
+import com.example.matchproescolar.viewmodel.MatchViewModel
+
+val SportGreen = Color(0xFF10B981)
+val SportSoftGreen = Color(0xFFE8F5E9)
+val PrimaryNavy = Color(0xFF0A192F)
+
+enum class ProfesorTab(val titulo: String, val icon: ImageVector) {
+    TORNEOS("Torneos", Icons.Default.EmojiEvents),
+    CALENDARIO("Calendario", Icons.Default.DateRange),
+    POSICIONES("Posiciones", Icons.Default.MilitaryTech),
+    CUENTA("Cuenta", Icons.Default.AccountCircle)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaProfesor(
+    onExit: () -> Unit = {}
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val viewModel: MatchViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(context.applicationContext as android.app.Application)
+    )
+
+    var selectedTab by remember { mutableStateOf(ProfesorTab.TORNEOS) }
+    var createOpen by remember { mutableStateOf(false) }
+    val listaTorneos by viewModel.torneos.collectAsState()
+
+    Scaffold(
+        bottomBar = {
+            if (!createOpen) {
+                NavigationBar(containerColor = Color.White) {
+                    ProfesorTab.values().forEach { tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            icon = { Icon(tab.icon, contentDescription = tab.titulo) },
+                            label = { Text(tab.titulo, fontSize = 11.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = SportGreen,
+                                selectedTextColor = SportGreen,
+                                indicatorColor = SportSoftGreen
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            if (createOpen) {
+                CrearTorneoView(
+                    viewModel = viewModel,
+                    onBack = { createOpen = false }
+                )
+            } else {
+                when (selectedTab) {
+                    ProfesorTab.TORNEOS -> PanelTorneosView(
+                        torneos = listaTorneos,
+                        onCreateClick = { createOpen = true }
+                    )
+                    ProfesorTab.CALENDARIO -> FixtureView()
+                    ProfesorTab.POSICIONES -> PosicionesView()
+                    ProfesorTab.CUENTA -> CuentaView(
+                        nombre = "Diana Restrepo",
+                        detalle = "Docente de Educación Física",
+                        onExit = onExit
+                    )
+                }
+            }
+        }
+    }
+}
+
+/* ---------- PANEL DE TORNEOS CON ROOM ---------- */
+
+@Composable
+fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item {
+            Column {
+                Text("Buenas tardes, profe Diana", fontSize = 13.sp, color = Color.Gray)
+                Text("TODO LISTO PARA JUGAR", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+            }
+        }
+
+        item {
+            Button(
+                onClick = onCreateClick,
+                colors = ButtonDefaults.buttonColors(containerColor = SportGreen),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Crear nuevo torneo", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Mostrar torneos guardados en la BD de Room
+        items(torneos) { torneo ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = PrimaryNavy),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column {
+                            Surface(
+                                color = SportGreen,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    torneo.estado,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(torneo.nombreDeporte, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("ID: ${torneo.idTorneo} · Categoría Escolar", fontSize = 12.sp, color = Color.LightGray)
+                        }
+                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = SportGreen, modifier = Modifier.size(36.dp))
+                    }
+                }
+            }
+        }
+
+        if (torneos.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4F6)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No hay torneos creados aún.", fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("Haz clic arriba en 'Crear nuevo torneo' para agregar uno a la base de datos.", fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ---------- CREACIÓN DE TORNEO EDITABLE ---------- */
+
+@Composable
+fun CrearTorneoView(viewModel: MatchViewModel, onBack: () -> Unit) {
+    var nombreTorneo by remember { mutableStateOf("") }
+    var categoriaTorneo by remember { mutableStateOf("") }
+    var guardadoExitoso by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        TextButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = null)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Volver")
+        }
+
+        Text("NUEVO TORNEO", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+
+        if (guardadoExitoso) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SportSoftGreen),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SportGreen, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("¡Torneo guardado en Room!", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("El torneo se registró correctamente en la base de datos local.", fontSize = 13.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onBack, colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)) {
+                        Text("Ver en el panel")
+                    }
+                }
+            }
+        } else {
+            OutlinedTextField(
+                value = nombreTorneo,
+                onValueChange = { nombreTorneo = it },
+                label = { Text("Nombre del torneo (ej. Copa Intercursos)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = categoriaTorneo,
+                onValueChange = { categoriaTorneo = it },
+                label = { Text("Categoría (ej. Secundaria · 8 equipos)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    if (nombreTorneo.isNotBlank() && categoriaTorneo.isNotBlank()) {
+                        val idUnico = System.currentTimeMillis().toString()
+                        viewModel.agregarTorneo(idUnico, nombreTorneo, categoriaTorneo)
+                        guardadoExitoso = true
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = SportGreen),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Crear torneo", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+/* ---------- CALENDARIO Y POSICIONES ---------- */
+
+@Composable
+fun FixtureView() {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("CALENDARIO DE PARTIDOS", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("🔴 EN VIVO", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Fútbol", color = Color.Gray, fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("11° A", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("2 - 1", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("11° B", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PosicionesView() {
+    val equipos = listOf(
+        Triple("11° A", "9", "+7"),
+        Triple("10° C", "7", "+4"),
+        Triple("11° B", "6", "+2")
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("TABLA DE POSICIONES", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = PrimaryNavy)
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().background(PrimaryNavy).padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("#  Equipo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Text("DG", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("PTS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+                equipos.forEachIndexed { i, eq ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${i + 1}.  ${eq.first}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                            Text(eq.third, fontSize = 14.sp, color = Color.Gray)
+                            Text(eq.second, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CuentaView(nombre: String, detalle: String, onExit: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = SportSoftGreen) {
+                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = SportGreen, modifier = Modifier.padding(8.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(detalle, color = Color.Gray, fontSize = 13.sp)
+            }
+        }
+        OutlinedButton(
+            onClick = onExit,
+            modifier = Modifier.fillMaxWidth().height(48.dp)
+        ) {
+            Text("Cerrar Sesión")
+        }
+    }
+}
