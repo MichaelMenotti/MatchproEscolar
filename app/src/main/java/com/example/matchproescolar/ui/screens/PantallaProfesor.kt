@@ -92,7 +92,8 @@ fun PantallaProfesor(
                     ProfesorTab.CUENTA -> CuentaView(
                         nombre = "Diana Restrepo",
                         detalle = "Docente de Educación Física",
-                        onExit = onExit
+                        onExit = onExit,
+                        onLogout = onExit
                     )
                 }
             }
@@ -469,7 +470,12 @@ fun PosicionesView() {
 }
 
 @Composable
-fun CuentaView(nombre: String, detalle: String, onExit: () -> Unit) {
+fun CuentaView(
+    nombre: String,
+    detalle: String,
+    onExit: () -> Unit,
+    onLogout: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = SportSoftGreen) {
@@ -481,11 +487,14 @@ fun CuentaView(nombre: String, detalle: String, onExit: () -> Unit) {
                 Text(detalle, color = Color.Gray, fontSize = 13.sp)
             }
         }
+
         OutlinedButton(
-            onClick = onExit,
+            onClick = {
+                onLogout()
+            },
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
-            Text("Cerrar Sesión")
+            Text("Cerrar Sesión", color = Color.Red, fontWeight = FontWeight.Bold)
         }
     }
 }
