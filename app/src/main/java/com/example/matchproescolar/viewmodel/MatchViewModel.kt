@@ -21,4 +21,16 @@ class MatchViewModel(application: Application) : AndroidViewModel(application) {
             dao.insertarTorneo(TorneoEntity(idTorneo = id, nombreDeporte = nombre, estado = estado))
         }
     }
+
+    fun actualizarTorneo(torneo: TorneoEntity) {
+        viewModelScope.launch {
+            dao.actualizarTorneo(torneo)
+        }
+    }
+
+    fun eliminarTorneo(torneo: TorneoEntity) {
+        viewModelScope.launch {
+            dao.eliminarTorneo(torneo)
+        }
+    }
 }

@@ -83,7 +83,8 @@ fun PantallaProfesor(
                 when (selectedTab) {
                     ProfesorTab.TORNEOS -> PanelTorneosView(
                         torneos = listaTorneos,
-                        onCreateClick = { createOpen = true }
+                        onCreateClick = { createOpen = true },
+                        viewModel = viewModel
                     )
                     ProfesorTab.CALENDARIO -> FixtureView()
                     ProfesorTab.POSICIONES -> PosicionesView()
@@ -97,11 +98,14 @@ fun PantallaProfesor(
         }
     }
 }
-
-/* ---------- PANEL DE TORNEOS CON ROOM ---------- */
-
 @Composable
-fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
+fun PanelTorneosView(
+    torneos: List<TorneoEntity>,
+    onCreateClick: () -> Unit,
+    viewModel: MatchViewModel
+) {
+    var torneoEnEdicion by remember { mutableStateOf<TorneoEntity?>(null) }
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
@@ -126,7 +130,6 @@ fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
             }
         }
 
-        // Mostrar torneos guardados en la BD de Room
         items(torneos) { torneo ->
             Card(
                 colors = CardDefaults.cardColors(containerColor = PrimaryNavy),
@@ -139,7 +142,7 @@ fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Top
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Surface(
                                 color = SportGreen,
                                 shape = RoundedCornerShape(4.dp)
@@ -156,7 +159,27 @@ fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
                             Text(torneo.nombreDeporte, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             Text("ID: ${torneo.idTorneo} · Categoría Escolar", fontSize = 12.sp, color = Color.LightGray)
                         }
-                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = SportGreen, modifier = Modifier.size(36.dp))
+
+                        // --- BOTONES DE ACCIÓN (ELIMINAR Y EDITAR) ---
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            // Botón Editar (Actualizar)
+                            IconButton(onClick = { torneoEnEdicion = torneo }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Editar torneo",
+                                    tint = Color.White
+                                )
+                            }
+
+                            // Botón Eliminar (Borrar)
+                            IconButton(onClick = { viewModel.eliminarTorneo(torneo) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Eliminar torneo",
+                                    tint = Color(0xFFFF6B6B)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -179,10 +202,18 @@ fun PanelTorneosView(torneos: List<TorneoEntity>, onCreateClick: () -> Unit) {
             }
         }
     }
+
+    torneoEnEdicion?.let { torneoActual ->
+        EditarTorneoDialog(
+            torneo = torneoActual,
+            onDismiss = { torneoEnEdicion = null },
+            onUpdate = { torneoModificado ->
+                viewModel.actualizarTorneo(torneoModificado)
+                torneoEnEdicion = null
+            }
+        )
+    }
 }
-
-/* ---------- CREACIÓN DE TORNEO EDITABLE ---------- */
-
 @Composable
 fun CrearTorneoView(viewModel: MatchViewModel, onBack: () -> Unit) {
     var nombreTorneo by remember { mutableStateOf("") }
@@ -351,4 +382,55 @@ fun CuentaView(nombre: String, detalle: String, onExit: () -> Unit) {
             Text("Cerrar Sesión")
         }
     }
+}
+@Composable
+fun EditarTorneoDialog(
+    torneo: TorneoEntity,
+    onDismiss: () -> Unit,
+    onUpdate: (TorneoEntity) -> Unit
+) {
+    var nuevoNombre by remember { mutableStateOf(torneo.nombreDeporte) }
+    var nuevaCategoria by remember { mutableStateOf(torneo.estado) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar Torneo", fontWeight = FontWeight.Bold, color = PrimaryNavy) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = nuevoNombre,
+                    onValueChange = { nuevoNombre = it },
+                    label = { Text("Nombre del deporte/torneo") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = nuevaCategoria,
+                    onValueChange = { nuevaCategoria = it },
+                    label = { Text("Categoría / Estado") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (nuevoNombre.isNotBlank() && nuevaCategoria.isNotBlank()) {
+                        val torneoActualizado = torneo.copy(
+                            nombreDeporte = nuevoNombre,
+                            estado = nuevaCategoria
+                        )
+                        onUpdate(torneoActualizado)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = SportGreen)
+            ) {
+                Text("Actualizar", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.Gray)
+            }
+        }
+    )
 }
