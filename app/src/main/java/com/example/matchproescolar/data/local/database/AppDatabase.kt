@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.matchproescolar.data.local.dao.TorneoDao
 import com.example.matchproescolar.data.model.TorneoEntity
 
-@Database(entities = [TorneoEntity::class], version = 1, exportSchema = false)
+@Database(entities = [TorneoEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun torneoDao(): TorneoDao
 
@@ -22,7 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "matchpro_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .allowMainThreadQueries()
                     .build()
                 INSTANCE = instance

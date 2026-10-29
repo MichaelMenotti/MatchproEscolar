@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class TorneoEntity(
     @PrimaryKey val idTorneo: String,
     val nombreDeporte: String,
-    val estado: String
+    val estado: String,
+    val numeroEquipos: Int = 0,
+    val nombresEquipos: String = ""
 )

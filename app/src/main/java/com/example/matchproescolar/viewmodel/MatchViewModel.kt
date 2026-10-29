@@ -16,10 +16,8 @@ class MatchViewModel(application: Application) : AndroidViewModel(application) {
     val torneos: StateFlow<List<TorneoEntity>> = dao.obtenerTorneos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun agregarTorneo(id: String, nombre: String, estado: String) {
-        viewModelScope.launch {
-            dao.insertarTorneo(TorneoEntity(idTorneo = id, nombreDeporte = nombre, estado = estado))
-        }
+    fun agregarTorneo(torneo: TorneoEntity) = viewModelScope.launch {
+        dao.insertarTorneo(torneo)
     }
 
     fun actualizarTorneo(torneo: TorneoEntity) {

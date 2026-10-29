@@ -1,6 +1,7 @@
 package com.example.matchproescolar.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -104,6 +105,7 @@ fun PanelTorneosView(
     onCreateClick: () -> Unit,
     viewModel: MatchViewModel
 ) {
+    var torneoSeleccionadoParaVer by remember { mutableStateOf<TorneoEntity?>(null) }
     var torneoEnEdicion by remember { mutableStateOf<TorneoEntity?>(null) }
 
     LazyColumn(
@@ -134,7 +136,9 @@ fun PanelTorneosView(
             Card(
                 colors = CardDefaults.cardColors(containerColor = PrimaryNavy),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { torneoSeleccionadoParaVer = torneo }
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -158,11 +162,14 @@ fun PanelTorneosView(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(torneo.nombreDeporte, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             Text("ID: ${torneo.idTorneo} · Categoría Escolar", fontSize = 12.sp, color = Color.LightGray)
+                            Text(
+                                text = "${torneo.numeroEquipos} equipos inscritos",
+                                fontSize = 12.sp,
+                                color = Color.LightGray
+                            )
                         }
 
-                        // --- BOTONES DE ACCIÓN (ELIMINAR Y EDITAR) ---
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            // Botón Editar (Actualizar)
                             IconButton(onClick = { torneoEnEdicion = torneo }) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
@@ -171,7 +178,6 @@ fun PanelTorneosView(
                                 )
                             }
 
-                            // Botón Eliminar (Borrar)
                             IconButton(onClick = { viewModel.eliminarTorneo(torneo) }) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -213,12 +219,20 @@ fun PanelTorneosView(
             }
         )
     }
+    torneoSeleccionadoParaVer?.let { torneo ->
+        DetalleEquiposDialog(
+            torneo = torneo,
+            onDismiss = { torneoSeleccionadoParaVer = null }
+        )
+    }
 }
 @Composable
 fun CrearTorneoView(viewModel: MatchViewModel, onBack: () -> Unit) {
     var nombreTorneo by remember { mutableStateOf("") }
     var categoriaTorneo by remember { mutableStateOf("") }
     var guardadoExitoso by remember { mutableStateOf(false) }
+    var numeroEquiposText by remember { mutableStateOf("") }
+    var nombresEquiposText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -272,13 +286,39 @@ fun CrearTorneoView(viewModel: MatchViewModel, onBack: () -> Unit) {
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = numeroEquiposText,
+                onValueChange = { numeroEquiposText = it },
+                label = { Text("Número de equipos (ej. 8)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = nombresEquiposText,
+                onValueChange = { nombresEquiposText = it },
+                label = { Text("Nombres de equipos (separados por coma)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
                 onClick = {
                     if (nombreTorneo.isNotBlank() && categoriaTorneo.isNotBlank()) {
                         val idUnico = System.currentTimeMillis().toString()
-                        viewModel.agregarTorneo(idUnico, nombreTorneo, categoriaTorneo)
+                        val numEquipos = numeroEquiposText.toIntOrNull() ?: 0
+
+                        val nuevoTorneo = TorneoEntity(
+                            idTorneo = idUnico,
+                            nombreDeporte = nombreTorneo,
+                            estado = categoriaTorneo,
+                            numeroEquipos = numEquipos,
+                            nombresEquipos = nombresEquiposText
+                        )
+
+                        viewModel.agregarTorneo(nuevoTorneo)
                         guardadoExitoso = true
                     }
                 },
@@ -291,6 +331,72 @@ fun CrearTorneoView(viewModel: MatchViewModel, onBack: () -> Unit) {
         }
     }
 }
+
+/* ---------- CARTA CLICKEABLE PARA VER DETALLES DEL TORNEO ---------- */
+
+@Composable
+fun DetalleEquiposDialog(
+    torneo: TorneoEntity,
+    onDismiss: () -> Unit
+) {
+    val listaNombres = torneo.nombresEquipos.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(torneo.nombreDeporte, fontWeight = FontWeight.Bold, color = PrimaryNavy, fontSize = 20.sp)
+                Text("Participantes (${torneo.numeroEquipos} equipos)", fontSize = 13.sp, color = Color.Gray)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (listaNombres.isEmpty()) {
+                    Text("No se especificaron nombres de equipos para este torneo.", color = Color.Gray, fontSize = 14.sp)
+                } else {
+                    listaNombres.forEachIndexed { index, nombre ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = SportSoftGreen),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${index + 1}.",
+                                    fontWeight = FontWeight.Bold,
+                                    color = SportGreen,
+                                    modifier = Modifier.width(24.dp)
+                                )
+                                Text(
+                                    text = nombre,
+                                    fontWeight = FontWeight.Medium,
+                                    color = PrimaryNavy,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryNavy)
+            ) {
+                Text("Cerrar", color = Color.White)
+            }
+        }
+    )
+}
+
 
 /* ---------- CALENDARIO Y POSICIONES ---------- */
 
@@ -391,6 +497,8 @@ fun EditarTorneoDialog(
 ) {
     var nuevoNombre by remember { mutableStateOf(torneo.nombreDeporte) }
     var nuevaCategoria by remember { mutableStateOf(torneo.estado) }
+    var nuevoNumeroEquipos by remember { mutableStateOf(torneo.numeroEquipos.toString()) }
+    var nuevosNombresEquipos by remember { mutableStateOf(torneo.nombresEquipos) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -409,6 +517,18 @@ fun EditarTorneoDialog(
                     label = { Text("Categoría / Estado") },
                     singleLine = true
                 )
+                OutlinedTextField(
+                    value = nuevoNumeroEquipos,
+                    onValueChange = { nuevoNumeroEquipos = it },
+                    label = { Text("Número de equipos") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = nuevosNombresEquipos,
+                    onValueChange = { nuevosNombresEquipos = it },
+                    label = { Text("Nombres de equipos") },
+                    singleLine = true
+                )
             }
         },
         confirmButton = {
@@ -417,7 +537,9 @@ fun EditarTorneoDialog(
                     if (nuevoNombre.isNotBlank() && nuevaCategoria.isNotBlank()) {
                         val torneoActualizado = torneo.copy(
                             nombreDeporte = nuevoNombre,
-                            estado = nuevaCategoria
+                            estado = nuevaCategoria,
+                            numeroEquipos = nuevoNumeroEquipos.toIntOrNull() ?: 0,
+                            nombresEquipos = nuevosNombresEquipos
                         )
                         onUpdate(torneoActualizado)
                     }
