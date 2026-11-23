@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.matchproescolar.data.model.TorneoEntity
 import com.example.matchproescolar.viewmodel.MatchViewModel
+import androidx.compose.runtime.LaunchedEffect
+import com.example.matchproescolar.ui.components.SeccionApiRemota
 
 val SportGreen = Color(0xFF10B981)
 val SportSoftGreen = Color(0xFFE8F5E9)
@@ -47,6 +49,10 @@ fun PantallaProfesor(
     var selectedTab by remember { mutableStateOf(ProfesorTab.TORNEOS) }
     var createOpen by remember { mutableStateOf(false) }
     val listaTorneos by viewModel.torneos.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarPartidosDeApi()
+    }
 
     Scaffold(
         bottomBar = {
@@ -84,8 +90,8 @@ fun PantallaProfesor(
                 when (selectedTab) {
                     ProfesorTab.TORNEOS -> PanelTorneosView(
                         torneos = listaTorneos,
-                        onCreateClick = { createOpen = true },
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        onCreateClick = { createOpen = true }
                     )
                     ProfesorTab.CALENDARIO -> FixtureView()
                     ProfesorTab.POSICIONES -> PosicionesView()
@@ -207,6 +213,10 @@ fun PanelTorneosView(
                     }
                 }
             }
+        }
+        item {
+            Spacer(modifier = Modifier.height(4.dp))
+            SeccionApiRemota(viewModel = viewModel)
         }
     }
 

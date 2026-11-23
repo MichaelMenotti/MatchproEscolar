@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.matchproescolar.data.model.TorneoEntity
 import com.example.matchproescolar.viewmodel.MatchViewModel
+import com.example.matchproescolar.ui.components.SeccionApiRemota
 
 enum class EstudianteTab(val titulo: String, val icon: ImageVector) {
     CALENDARIO("Torneos", Icons.Default.EmojiEvents),
@@ -40,6 +41,10 @@ fun PantallaEstudiante(
 
     var selectedTab by remember { mutableStateOf(EstudianteTab.CALENDARIO) }
     val listaTorneos by viewModel.torneos.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarPartidosDeApi()
+    }
 
     Scaffold(
         bottomBar = {
@@ -67,13 +72,17 @@ fun PantallaEstudiante(
                 .padding(16.dp)
         ) {
             when (selectedTab) {
-                EstudianteTab.CALENDARIO -> CalendarioEstudianteView(torneos = listaTorneos)
+                EstudianteTab.CALENDARIO -> CalendarioEstudianteView(
+                torneos = listaTorneos,
+                viewModel = viewModel
+            )
                 EstudianteTab.POSICIONES -> PosicionesView()
                 EstudianteTab.CUENTA -> CuentaEstudianteView(
                     nombre = "Mateo Gómez",
                     detalle = "Estudiante · Grado 11° A",
                     onExit = onExit
                 )
+
             }
         }
     }
@@ -82,7 +91,10 @@ fun PantallaEstudiante(
 /* ---------- VISTA DE TORNEOS PARA EL ESTUDIANTE (Desde Room) ---------- */
 
 @Composable
-fun CalendarioEstudianteView(torneos: List<TorneoEntity>) {
+fun CalendarioEstudianteView(
+    torneos: List<TorneoEntity>,
+    viewModel: MatchViewModel
+) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
@@ -95,7 +107,7 @@ fun CalendarioEstudianteView(torneos: List<TorneoEntity>) {
         }
 
         // Listamos los torneos que el profesor guardó en la BD
-        items(torneos) { torneo ->
+        items(torneos, key = { it.idTorneo }) { torneo ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -144,6 +156,11 @@ fun CalendarioEstudianteView(torneos: List<TorneoEntity>) {
                     }
                 }
             }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(4.dp))
+            SeccionApiRemota(viewModel = viewModel)
         }
     }
 }
